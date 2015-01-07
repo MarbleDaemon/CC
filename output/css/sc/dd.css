@@ -1,0 +1,24 @@
+#isLandscape, #isPortrait
+{
+	display : none;
+	
+	position: absolute;
+}
+
+@media screen and (orientation : landscape)
+{
+	#isLandscape
+	{
+		display : block;
+	}
+
+}
+
+@media screen and (orientation : portrait)
+{
+	#isPortrait
+	{
+		display : block;
+	}
+
+}

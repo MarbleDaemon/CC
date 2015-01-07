@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<project basedir="." default="compile">
+
+	<target name="compile">
+
+		<exec executable="build.bat">
+		</exec>
+
+	</target>
+
+</project>

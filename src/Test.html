@@ -1,0 +1,143 @@
+<html>
+<head>
+    <style type="text/css">
+        canvas { border: 1px solid #ccc; }
+    </style>
+    <script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.min.js"></script>
+    <script type="text/javascript">
+        $(function() {
+            var canvas = document.getElementById('canvas');
+            if (canvas.getContext) {
+                var context = canvas.getContext('2d');
+
+                // math for expanding a polygon
+
+                function vecUnit(v) {
+                    var len = Math.sqrt(v.x * v.x + v.y * v.y);
+                    return { x: v.x / len, y: v.y / len };
+                }
+
+                function vecMul(v, s) {
+                    return { x: v.x * s, y: v.y * s };
+                }
+
+                function vecDot(v1, v2) {
+                    return v1.x * v2.x + v1.y * v2.y;
+                }
+
+                function vecRot90CW(v) {
+                    return { x: v.y, y: -v.x };
+                }
+
+                function vecRot90CCW(v) {
+                    return { x: -v.y, y: v.x };
+                }
+
+                function intersect(line1, line2) {
+                    var a1 = line1[1].x - line1[0].x;
+                    var b1 = line2[0].x - line2[1].x;
+                    var c1 = line2[0].x - line1[0].x;
+
+                    var a2 = line1[1].y - line1[0].y;
+                    var b2 = line2[0].y - line2[1].y;
+                    var c2 = line2[0].y - line1[0].y;
+
+                    var t = (b1*c2 - b2*c1) / (a2*b1 - a1*b2);
+
+                    return {
+                        x: line1[0].x + t * (line1[1].x - line1[0].x),
+                        y: line1[0].y + t * (line1[1].y - line1[0].y)
+                    };
+                }
+
+                function polyIsCw(p) {
+                    return vecDot(
+                                    vecRot90CW({ x: p[1].x - p[0].x, y: p[1].y - p[0].y }),
+                                    { x: p[2].x - p[1].x, y: p[2].y - p[1].y }) >= 0;
+                }
+
+                function expandPoly(p, distance) {
+                    var expanded = [];
+                    var rot = polyIsCw(p) ? vecRot90CCW : vecRot90CW;
+
+                    for (var i = 0; i < p.length; ++i) {
+
+                        // get this point (pt1), the point before it
+                        // (pt0) and the point that follows it (pt2)
+                        var pt0 = p[(i > 0) ? i - 1 : p.length - 1];
+                        var pt1 = p[i];
+                        var pt2 = p[(i < p.length - 1) ? i + 1 : 0];
+
+                        // find the line vectors of the lines going
+                        // into the current point
+                        var v01 = { x: pt1.x - pt0.x, y: pt1.y - pt0.y };
+                        var v12 = { x: pt2.x - pt1.x, y: pt2.y - pt1.y };
+
+                        // find the normals of the two lines, multiplied
+                        // to the distance that polygon should inflate
+                        var d01 = vecMul(vecUnit(rot(v01)), distance);
+                        var d12 = vecMul(vecUnit(rot(v12)), distance);
+
+                        // use the normals to find two points on the
+                        // lines parallel to the polygon lines
+                        var ptx0  = { x: pt0.x + d01.x, y: pt0.y + d01.y };
+                        var ptx10 = { x: pt1.x + d01.x, y: pt1.y + d01.y };
+                        var ptx12 = { x: pt1.x + d12.x, y: pt1.y + d12.y };
+                        var ptx2  = { x: pt2.x + d12.x, y: pt2.y + d12.y };
+
+                        // find the intersection of the two lines, and
+                        // add it to the expanded polygon
+                        expanded.push(intersect([ptx0, ptx10], [ptx12, ptx2]));
+                    }
+                    return expanded;
+                }
+
+                // drawing and animating a sample polygon on a canvas
+
+                function drawPoly(p) {
+                    context.beginPath();
+                    context.moveTo(p[0].x, p[0].y);
+                    for (var i = 0; i < p.length; ++i) {
+                        context.lineTo(p[i].x, p[i].y);
+                    }
+                    context.closePath();
+                    context.fill();
+                    context.stroke();
+                }
+
+                function drawPolyWithMargin(p, margin) {
+                    context.fillStyle = "rgb(255,255,255)";
+                    context.strokeStyle = "rgb(200,150,150)";
+                    drawPoly(expandPoly(p, margin));
+
+                    context.fillStyle = "rgb(150,100,100)";
+                    context.strokeStyle = "rgb(200,150,150)";
+                    drawPoly(p);
+                }
+
+                var p = [{ x: 100, y: 100 }, { x: 200, y: 120 }, { x: 80, y: 200 }, { x: 20, y: 200 }];
+                setInterval(function() {
+                    for (var i in p) {
+                        var pt = p[i];
+                        if (pt.vx === undefined) {
+                            pt.vx = 5 * (Math.random() - 0.5);
+                            pt.vy = 5 * (Math.random() - 0.5);
+                        }
+
+                        pt.x += pt.vx;
+                        pt.y += pt.vy;
+
+                        if (pt.x < 0 || pt.x > 400) { pt.vx = -pt.vx; }
+                        if (pt.y < 0 || pt.y > 400) { pt.vy = -pt.vy; }
+                    }
+                    context.clearRect(0, 0, 800, 400);
+                    drawPolyWithMargin(p, 20);
+                }, 50);
+            }
+        });
+    </script>
+</head>
+<body>
+<canvas id="canvas" width="400" height="400"></canvas>
+</body>
+</html>
